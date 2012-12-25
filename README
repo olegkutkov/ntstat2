@@ -1,0 +1,17 @@
+
+ntstat2 - crossplatform network monitoring tool for Linux, Android, *BSD and other systems.
+
+Version: 0.1 (2012-08-24)
+Copyright (C) 2012 Oleg Kutkov <elenbert@gmail.com>
+  
+***
+ Copying and distribution of this file, with or without modification,
+ are permitted in any medium without royalty provided the copyright
+ notice and this notice are preserved.
+
+ See the files ./INSTALL* for building and installation instructions.
+
+ Home page: https://github.com/elenbert/ntstat2
+
+ ntstat2 is free software. See the file COPYING for copying conditions.
+
