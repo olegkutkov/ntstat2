@@ -29,6 +29,14 @@
 #include "timer.h"
 
 /*
+ * TODO: This project is not finished, yet.
+ *	 Actual implementation should be called "draft"
+ *	  * implement speed/data calculator
+ *	  * implement output methods
+ *	  * implement *BSD support code
+ */
+
+/*
  */
 enum speed_unit {
 	BIT_PER_SEC = 0,
