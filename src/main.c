@@ -28,13 +28,6 @@
 #include "config.h"
 #include "timer.h"
 
-/*
- * TODO: This project is not finished, yet.
- *	 Actual implementation should be called "draft"
- *	  * implement speed/data calculator
- *	  * implement output methods
- *	  * implement *BSD support code
- */
 
 /*
  */
@@ -61,12 +54,38 @@ static const char* speed_values[] = {
 	"GByte/s"
 };
 
+/*
+ */
+static const char* working_animation_chars[] = {
+	"\\",
+	"/",
+	"-"
+};
+
+enum working_animation_phases {
+	PHASE_ONE = 0,
+	PHASE_TWO,
+	PHASE_THREE,
+	PHASE_LAST
+};
+typedef enum working_animation_phases working_animation_phases_t;
+
+static working_animation_phases_t last_animation_phase = PHASE_ONE;
+
+/**/
+
 #define START_DATE 1900
 #define MONTH_OFFSET 1
 
 static int run_stat_for_iface(const char* ifname);
 static speed_unit_t s_speed_unit = KILOBYTE_PER_SEC;  /* default speed unit */
 static time_t s_measure_timeout = 1000;			/* default timout 1000ms */
+static int use_raw_format = 0;
+static int start_from_zero = 0;
+static char raw_file_name[1024] = { 0 };
+
+/* 
+ */
 
 static void show_usage()
 {
@@ -127,7 +146,7 @@ int main(int argc, char **argv)
 	int c;
 	const char* ifname = NULL;
 
-	while ((c = getopt (argc, argv, "li:w:t:u:hv")) != -1) {
+	while ((c = getopt (argc, argv, "li:w:t:u:hvz")) != -1) {
 		switch (c) {
 			case 'l':
 				dump_interfaces();
@@ -151,12 +170,19 @@ int main(int argc, char **argv)
 
 			case 't':
 				s_measure_timeout = (time_t)atoi(optarg);
-		}
-	}
 
-	if (!ifname) {
-		printf("Please specify interface for listening\n");
-		return -1;
+			case 'w':
+				use_raw_format = 1;
+				strcpy(raw_file_name, optarg);
+				break;
+
+			case 'z':
+				start_from_zero = 1;
+				break;
+
+			case '?':
+				return -1;
+		}
 	}
 
 	run_stat_for_iface(ifname);
@@ -185,7 +211,6 @@ static void get_date_time_str(char* prefix, char* str)
 
 static void timer_function(void* cookie)
 {
-	char date_time_str[30];
 	if_stat_t* stat = NULL;
 	net_iface_t* iface = (net_iface_t*) cookie;
 
@@ -194,9 +219,14 @@ static void timer_function(void* cookie)
 	}
 
 	stat = &iface->stat;
-
 	iface->get_stat(stat, iface->if_name);
 
+	if (iface->dump_stat(iface) == -1) {
+		printf("Unable to dump statistics. It's better to abort application!\n");
+		abort();
+	}
+
+/*
 	get_date_time_str("\rNow: ", date_time_str);
 
 	printf("\r| %s %-12lli %-10lli %-13lli %-9lli"
@@ -205,7 +235,23 @@ static void timer_function(void* cookie)
 		, stat->out_bytes/1024
 		, stat->in_bytes
 		, stat->in_bytes/1024);
+*/
+}
 
+static int dump_stat_stdout(net_iface_t* interface)
+{
+	return 0;
+}
+
+static int dump_stat_raw_file(net_iface_t* interface)
+{
+	printf("\rWorking...  %s", working_animation_chars[last_animation_phase++]);
+
+	if (last_animation_phase == PHASE_LAST) {
+		last_animation_phase = PHASE_ONE;
+	}
+
+	return 0;
 }
 
 static void wait_for_shutdown()
@@ -231,7 +277,7 @@ static void wait_for_shutdown()
 
 static int run_stat_for_iface(const char* ifname)
 {
-	char date_time_str[33];
+	char date_time_str[52];
 	net_iface_t interface;
 
 	memset(&interface, 0, sizeof(net_iface_t));
@@ -242,10 +288,17 @@ static int run_stat_for_iface(const char* ifname)
 		return -1;
 	}
 
+	if (use_raw_format) {
+		printf(" * Set RAW mode, output file: %s\n", raw_file_name);
+		interface.dump_stat = dump_stat_raw_file;
+	} else {
+		interface.dump_stat = dump_stat_stdout;
+	}
+
 	set_timer_callback(timer_function);
 
 	get_date_time_str("Started at: ", date_time_str);
-	printf("\n * %s\n", date_time_str);
+	printf("\n * %s\n\n", date_time_str);
 
 	printf(" * Listening on %s\n", ifname);
 	printf("\tinet: %s\n\tinet6: %s\n\n", interface.str_ip4_addr, interface.str_ip6_addr);
