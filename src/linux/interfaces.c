@@ -95,12 +95,12 @@ void dump_interfaces()
 
 static int get_interface_ipv4_info(net_iface_t* interface)
 {
-	
+	return 0;
 }
 
 static int get_interface_ipv6_info(net_iface_t* interface)
 {
-	
+	return 0;
 }
 
 static int get_interface_info(net_iface_t* interface)

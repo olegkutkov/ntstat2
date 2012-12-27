@@ -53,6 +53,7 @@ struct net_iface {
 	char str_ip4_addr[INET_ADDRSTRLEN];
 	char str_ip6_addr[INET6_ADDRSTRLEN];
 	int (*get_stat) (if_stat_t*, const char*);
+	int (*dump_stat) (struct net_iface* );
 };
 typedef struct net_iface net_iface_t;
 
