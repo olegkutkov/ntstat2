@@ -19,7 +19,10 @@
 
 bin_PROGRAMS = ntstat2
 
-ntstat2_SOURCES = main.c timer.c
+ntstat2_SOURCES = main.c \
+		timer.c \
+		stdout_dump.c \
+		raw_dump.c
 
 if HAVE_LINUX
 ntstat2_SOURCES += \

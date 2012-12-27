@@ -121,6 +121,10 @@ void stop_timer()
 
 void* thread_func(void* arg)
 {
+	if (callback_func) {
+		callback_func(arg); /* first call even without timer events */
+	}
+
 	while (1) {
 		if (timer_event && callback_func) {
 			pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);

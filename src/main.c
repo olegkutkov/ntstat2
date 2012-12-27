@@ -27,55 +27,10 @@
 #include "interfaces.h"
 #include "config.h"
 #include "timer.h"
+#include "stdout_dump.h"
+#include "raw_dump.h"
+#include "speed.h"
 
-
-/*
- */
-enum speed_unit {
-	BIT_PER_SEC = 0,
-	BYTE_PER_SEC,
-	KILOBIT_PER_SEC,
-	KILOBYTE_PER_SEC,
-	MEGABIT_PER_SEC,
-	MEGABYTE_PER_SEC,
-	GIGABIT_PER_SEC,
-	GIGABYTE_PER_SEC
-};
-typedef enum speed_unit speed_unit_t;
-
-static const char* speed_values[] = {
-	"Bit/s",
-	"Byte/s",
-	"kBit/s",
-	"kByte/s",
-	"MBit/s",
-	"MByte/s",
-	"GBit/s",
-	"GByte/s"
-};
-
-/*
- */
-static const char* working_animation_chars[] = {
-	"\\",
-	"/",
-	"-"
-};
-
-enum working_animation_phases {
-	PHASE_ONE = 0,
-	PHASE_TWO,
-	PHASE_THREE,
-	PHASE_LAST
-};
-typedef enum working_animation_phases working_animation_phases_t;
-
-static working_animation_phases_t last_animation_phase = PHASE_ONE;
-
-/**/
-
-#define START_DATE 1900
-#define MONTH_OFFSET 1
 
 static int run_stat_for_iface(const char* ifname);
 static speed_unit_t s_speed_unit = KILOBYTE_PER_SEC;  /* default speed unit */
@@ -201,7 +156,7 @@ static void get_date_time_str(char* prefix, char* str)
 	sprintf( str
 		, "%s %04i-%02i-%02i %02i:%02i:%02i"
 		, prefix
-		, current_tm->tm_year + START_DATE
+		, current_tm->tm_year + START_CALENDAR_DATE
 		, current_tm->tm_mon + MONTH_OFFSET
 		, current_tm->tm_mday
 		, current_tm->tm_hour
@@ -225,33 +180,6 @@ static void timer_function(void* cookie)
 		printf("Unable to dump statistics. It's better to abort application!\n");
 		abort();
 	}
-
-/*
-	get_date_time_str("\rNow: ", date_time_str);
-
-	printf("\r| %s %-12lli %-10lli %-13lli %-9lli"
-		, date_time_str
-		, stat->out_bytes
-		, stat->out_bytes/1024
-		, stat->in_bytes
-		, stat->in_bytes/1024);
-*/
-}
-
-static int dump_stat_stdout(net_iface_t* interface)
-{
-	return 0;
-}
-
-static int dump_stat_raw_file(net_iface_t* interface)
-{
-	printf("\rWorking...  %s", working_animation_chars[last_animation_phase++]);
-
-	if (last_animation_phase == PHASE_LAST) {
-		last_animation_phase = PHASE_ONE;
-	}
-
-	return 0;
 }
 
 static void wait_for_shutdown()
@@ -271,8 +199,6 @@ static void wait_for_shutdown()
 	}
 
 	tcsetattr(STDIN_FILENO, TCSANOW, &termio_prev);
-
-	printf("\n\n  'c' key was pressed, exiting...\n");
 }
 
 static int run_stat_for_iface(const char* ifname)
@@ -288,28 +214,45 @@ static int run_stat_for_iface(const char* ifname)
 		return -1;
 	}
 
-	if (use_raw_format) {
-		printf(" * Set RAW mode, output file: %s\n", raw_file_name);
-		interface.dump_stat = dump_stat_raw_file;
-	} else {
-		interface.dump_stat = dump_stat_stdout;
-	}
-
-	set_timer_callback(timer_function);
-
 	get_date_time_str("Started at: ", date_time_str);
 	printf("\n * %s\n\n", date_time_str);
 
 	printf(" * Listening on %s\n", ifname);
 	printf("\tinet: %s\n\tinet6: %s\n\n", interface.str_ip4_addr, interface.str_ip6_addr);
 
+	if (use_raw_format) {
+		if (init_raw_dump(start_from_zero, s_speed_unit, raw_file_name) == -1) {
+			printf("Unable to init RAW dump\n");
+			return -1;
+		}
+
+		printf(" * Set RAW mode, output file: %s\n\n", raw_file_name);
+		interface.dump_stat = dump_stat_raw;
+	} else {
+		if (init_stdout_dump(start_from_zero, s_speed_unit) == -1) {
+			printf("Unable to init stdout dump\n");
+			return -1;
+		}
+
+		interface.dump_stat = dump_stat_stdout;
+	}
+
+	set_timer_callback(timer_function);
+
 	if (start_timer(s_measure_timeout, &interface) == -1) {
 		printf("Unable to start\n");
+		return -1;
 	}
 
 	wait_for_shutdown();
 
 	stop_timer();
+
+	if (use_raw_format) {
+		cleanup_raw_dump();
+	} else {
+		cleanup_stdout();
+	}
 
 	return 0;
 }
