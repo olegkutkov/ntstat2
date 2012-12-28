@@ -125,6 +125,7 @@ int main(int argc, char **argv)
 
 			case 't':
 				s_measure_timeout = (time_t)atoi(optarg);
+				break;
 
 			case 'w':
 				use_raw_format = 1;

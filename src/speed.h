@@ -20,6 +20,8 @@
 #ifndef SPEED_H
 #define SPEED_H
 
+#include <stdint.h>
+
 #define START_CALENDAR_DATE 	1900
 #define MONTH_OFFSET 		1
 
@@ -57,7 +59,7 @@ static const char* data_amounts[] = {
 	"GBytes"
 };
 
-static unsigned long value_in_actual_unit(unsigned long valBytes, speed_unit_t unit)
+static float value_in_actual_unit(float valBytes, speed_unit_t unit)
 {
 	if (unit == BYTE_PER_SEC) {
 		return valBytes;
@@ -90,6 +92,19 @@ static unsigned long value_in_actual_unit(unsigned long valBytes, speed_unit_t u
 	}
 
 	return valBytes;
+}
+
+static double calc_speed(const long long int start_bytes, const long long int end_bytes, const unsigned time_elapsed)
+{
+	uint64_t sub_bytes = 0;
+
+	if (start_bytes == 0) {
+		return 0;
+	}
+
+	sub_bytes = end_bytes - start_bytes;
+
+	return sub_bytes / time_elapsed;
 }
 
 #endif
